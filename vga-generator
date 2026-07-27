@@ -1,1 +1,55 @@
 
+`timescale 1ns / 1ps
+
+module VGA_Generator(VGA_clk, x_count, y_count, display_area, VGA_hsync, VGA_vsync);
+input VGA_clk;
+output reg[9:0] x_count,y_count;
+output reg display_area;
+output VGA_hsync,VGA_vsync;
+
+reg p_hsync,p_vsync;
+
+integer porchHF = 640;
+integer syncH = 656;
+integer porchHB = 752;
+integer maxH = 800;
+
+integer porchVF = 480;
+integer syncV = 490;
+integer porchVB = 492;
+integer maxV = 525;
+
+always@(posedge VGA_clk)
+begin
+if(x_count == maxH)
+x_count <= 10'b0;
+else
+x_count <= x_count + 1'b1;
+end
+
+always@(posedge VGA_clk)
+begin
+if(x_count == maxH)
+begin
+if(y_count == maxV)
+y_count <= 10'b0;
+else
+y_count <= y_count + 1'b1;
+end
+end
+
+always@(posedge VGA_clk)
+begin
+display_area <= (x_count < porchHF)&(y_count < porchVF);
+end
+
+always@(posedge VGA_clk)
+begin
+p_hsync <= (x_count >= syncH)&(x_count < porchHB);
+p_vsync <= (y_count >= syncV)&(y_count < porchVB);
+end
+
+assign VGA_vsync = ~p_vsync;
+assign VGA_hsync = ~p_hsync;
+
+endmodule
