@@ -1,1 +1,96 @@
 
+`timescale 1ns / 1ps
+
+module main_module(red, green, blue, h_sync, v_sync, clk, rst, l,r,u,d);
+input clk,rst,l,r,u,d;
+output reg[4:0] red,blue;
+output reg[5:0] green;
+output h_sync,v_sync;
+
+reg apple,border,game_over,head,snake;
+reg [9:0]apple_x;
+reg [9:0]apple_y;
+reg [9:0]snake_x;
+reg [8:0]snake_y;
+wire [9:0]x_count,y_count;
+wire [9:0]rand_x;
+wire [9:0]rand_y;
+wire [9:0]random_x;
+wire [9:0]random_y;
+wire [3:0]direction;
+wire R,G,B;
+wire VGA_clk, update_clk, display_area;
+
+ClkDivider divider(VGA_clk, clk);
+update_clk update(clk, update_clk);
+random_point random(VGA_clk , rand_x , rand_y);
+button_input button(l, r, u, d, clk, direction);
+VGA_Generator vga(VGA_clk, x_count, y_count, display_area, h_sync, v_sync);
+
+assign random_x = rand_x;
+assign random_y = rand_y;
+
+initial
+begin
+snake_x = 10'd20;
+snake_y = 9'd20;
+end
+
+always@(posedge VGA_clk)
+begin
+apple <= (x_count > apple_x)&(x_count < apple_x + 50) & (y_count> apple_y)&(y_count < apple_y + 50);
+end
+
+always@(posedge VGA_clk)
+begin
+head <= (x_count > snake_x)&(x_count < snake_x +50)&(y_count > snake_y)&(y_count < snake_y + 50);
+end
+
+always@(posedge VGA_clk)
+begin
+border <= ((x_count >= 0)&(x_count < 15)&(y_count >= 220)&(y_count < 280))|((x_count >= 630)&(x_count < 641)&(~y_count >= 220)&(~y_count < 280))|((y_count >= 0)&(y_count < 15)|(y_count >= 465)&(y_count < 481));
+end
+
+always@(posedge VGA_clk)
+begin
+if(game_over|rst)
+begin
+apple_x = 350;
+apple_y = 300;
+end
+if(apple & head)
+begin
+apple_x = rand_x;
+apple_y = rand_y;
+end
+end
+
+always@(posedge VGA_clk)
+begin
+if((border & head)| rst) begin game_over <= 1; end
+else
+begin
+game_over <= 0;
+end
+end
+
+always@(posedge update_clk)
+begin
+if(direction == 4'b0001) begin snake_x <= snake_x - 5; end
+if(direction == 4'b0010) begin snake_x <= snake_x + 5; end
+if(direction == 4'b0100) begin snake_y <= snake_y - 5; end
+if(direction == 4'b1000) begin snake_y <= snake_y + 5; end
+end
+
+assign R = display_area & apple;
+assign G = display_area & head;
+assign B = display_area & border;
+
+always@(posedge VGA_clk)
+begin
+red = {5{R}};
+green = {6{G}};
+blue = {5{B}};
+end
+
+endmodule
